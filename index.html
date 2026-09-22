@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f3ee">
+  <title>魔方实验室 · Cube Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%232d7665'/%3E%3Cpath d='m20 8 11 6v13l-11 6-11-6V14zM9 14l11 6 11-6M20 20v13' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./src/style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9M8 5.2l8 4.6"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 5-5m2-3c2-3 3-4 5-4h3m-4-4 4 4-4 4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-step" viewBox="0 0 24 24"><path d="m5 5 10 7-10 7zM19 5v14"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 5 3 11l6 6M3 11h11a6 6 0 0 1 6 6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="魔方实验室首页"><span class="brand-icon"><svg><use href="#i-cube"/></svg></span><span>魔方实验室<span class="brand-en">CUBE STUDIO</span></span></a>
+      <div class="top-meta"><span class="online-dot"></span> 一个关于秩序的小实验 <span class="version">VOL. 001</span></div>
+      <button id="help-button" class="icon-button help-button" aria-label="查看操作说明">?</button>
+    </header>
+
+    <main>
+      <section class="intro"><div><div class="eyebrow"><span></span> PLAY. EXPLORE. SOLVE.</div><h1>转动之间，<span>找回秩序。</span></h1><p>从一次打乱开始，用自己的方式解开它。</p></div><div class="cube-type"><span class="type-mark">3 × 3</span><span>经典三阶魔方</span></div></section>
+
+      <div class="workspace">
+        <section class="stage-card" aria-label="三维魔方交互区域">
+          <div class="stage-top"><span class="stage-label"><span class="live-dot"></span> 自由探索</span><span id="status-badge" class="status-badge">已还原</span></div>
+          <div id="viewport" aria-label="三维魔方。拖动背景旋转视角，拖动色块转层。也可以使用右侧按钮。"><div id="loading" class="loading">正在准备你的魔方…</div></div>
+          <div class="axis-legend"><span><i style="--face:var(--green)"></i>F 前</span><span><i style="--face:var(--red)"></i>R 右</span><span><i style="--face:#e3dfd4"></i>U 上</span></div>
+          <button id="reset-view" class="view-button" title="恢复默认视角"><svg><use href="#i-eye"/></svg> 重置视角</button>
+          <div id="stage-message" class="stage-message" aria-live="polite">六面归一，新的挑战随时开始。</div>
+          <div class="stage-bottom"><span><b class="mouse-icon"></b> 拖动空白旋转视角</span><span><b class="drag-icon">↔</b> 拖动色块转动一层</span><span>滚轮缩放</span></div>
+        </section>
+
+        <aside class="controls-card" aria-label="魔方控制">
+          <section class="control-section primary-controls"><div class="section-heading"><h2>开始一局</h2><span class="section-index">01</span></div>
+            <button id="scramble" class="button scramble-button"><svg><use href="#i-shuffle"/></svg><span>随机打乱</span><span class="button-note">24 步</span></button>
+            <div class="solve-row"><button id="auto-solve" class="button primary-button"><svg><use href="#i-play"/></svg><span>自动还原</span></button><button id="step-solve" class="button step-button" title="计算还原方案，每次执行一步"><svg><use href="#i-step"/></svg>逐步</button></div>
+            <div class="speed-control"><label for="speed">转动速度</label><input id="speed" type="range" min="0.5" max="3" step="0.5" value="1"><output id="speed-value" for="speed">1.0×</output></div>
+          </section>
+
+          <section class="control-section manual-controls"><div class="section-heading"><h2>亲手转一转</h2><span class="section-index">02</span></div><div class="direction-picker" role="group" aria-label="转动方向"><button data-direction="1" class="selected" aria-pressed="true">↻ 顺时针</button><button data-direction="-1" aria-pressed="false">↺ 逆时针</button><button data-direction="2" aria-pressed="false">180°</button></div>
+            <div id="face-controls" class="face-controls"></div>
+            <p class="keyboard-tip">键盘 <kbd>U</kbd><kbd>D</kbd><kbd>L</kbd><kbd>R</kbd><kbd>F</kbd><kbd>B</kbd><br><span>按住 <kbd>Shift</kbd> 反向转动</span></p>
+          </section>
+
+          <section class="control-section session-controls"><div class="session-stats"><div><span>本局转动</span><strong id="move-count">0<small>步</small></strong></div><div><span>已归位面</span><strong id="solved-count">6<small>/ 6</small></strong></div><div><span>用时</span><strong id="timer">00:00</strong></div></div><div class="utility-row"><button id="undo" class="text-button"><svg><use href="#i-undo"/></svg>撤销一步</button><button id="reset" class="text-button"><svg><use href="#i-reset"/></svg>重新开始</button></div></section>
+        </aside>
+      </div>
+
+      <section class="journey-card"><div class="journey-heading"><div><span class="eyebrow">EVERY MOVE COUNTS</span><h2 id="journey-title">转动轨迹</h2></div><div class="journey-right"><span id="journey-caption">每一步，都离答案更近一点。</span><span id="solution-progress" hidden></span></div></div><div id="move-trail" class="move-trail"><span class="trail-empty">还没有转动。打乱魔方，或试着转动任意一面。<svg><use href="#i-arrow"/></svg></span></div><div id="solve-progress-track" class="solve-progress-track" hidden><div id="solve-progress-bar"></div></div></section>
+      <footer><span>一点耐心，六面可能。</span><span>BUILT TO PLAY <span class="footer-cross">＋</span> POWERED BY THREE.JS</span></footer>
+    </main>
+  </div>
+
+  <dialog id="help-dialog"><div class="dialog-heading"><h2>把魔方握在手里。</h2><button id="close-help" class="icon-button" aria-label="关闭操作说明">×</button></div><p>拖动空白处观察各个面，滚轮缩放。在色块上沿横向或纵向拖动，转层会跟随拖动，松手后归位；轻微拖动会回到原位。拖动面中心可旋转视角。</p><dl><dt>U / D</dt><dd>上 / 下</dd><dt>L / R</dt><dd>左 / 右</dd><dt>F / B</dt><dd>前 / 后</dd></dl><p>方向始终以<strong>正对所转面的视角</strong>为准。键盘字母键顺时针转动，Shift + 字母键逆时针转动。符号 <strong>′</strong> 代表逆时针，<strong>2</strong> 代表转动 180°。</p><p><strong>自动还原</strong>会为当前状态计算解法，可随时暂停；<strong>逐步</strong>每次执行解法的一步。手动转动后会重新计算方案。计时从打乱后的第一次转动开始，或从已还原状态的第一次转动开始。</p><button id="help-done" class="button primary-button">开始探索 <svg><use href="#i-arrow"/></svg></button></dialog>
+  <script type="module" src="./src/app.mjs"></script>
+</body>
+</html>
+
+
