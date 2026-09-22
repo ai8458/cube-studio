@@ -52,7 +52,8 @@
 
           <section class="control-section manual-controls"><div class="section-heading"><h2>亲手转一转</h2><span class="section-index">02</span></div><div class="direction-picker" role="group" aria-label="转动方向"><button data-direction="1" class="selected" aria-pressed="true">↻ 顺时针</button><button data-direction="-1" aria-pressed="false">↺ 逆时针</button><button data-direction="2" aria-pressed="false">180°</button></div>
             <div id="face-controls" class="face-controls"></div>
-            <p class="keyboard-tip">键盘 <kbd>U</kbd><kbd>D</kbd><kbd>L</kbd><kbd>R</kbd><kbd>F</kbd><kbd>B</kbd><br><span>按住 <kbd>Shift</kbd> 反向转动</span></p>
+            <p class="slice-caption">中间层</p><div id="slice-controls" class="face-controls" role="group" aria-label="中间层转动"></div>
+            <p class="keyboard-tip">键盘 <kbd>U</kbd><kbd>D</kbd><kbd>L</kbd><kbd>R</kbd><kbd>F</kbd><kbd>B</kbd><br>中层 <kbd>M</kbd><kbd>E</kbd><kbd>S</kbd> · <span><kbd>Shift</kbd> 反向转动</span></p>
           </section>
 
           <section class="control-section session-controls"><div class="session-stats"><div><span>本局转动</span><strong id="move-count">0<small>步</small></strong></div><div><span>已归位面</span><strong id="solved-count">6<small>/ 6</small></strong></div><div><span>用时</span><strong id="timer">00:00</strong></div></div><div class="utility-row"><button id="undo" class="text-button"><svg><use href="#i-undo"/></svg>撤销一步</button><button id="reset" class="text-button"><svg><use href="#i-reset"/></svg>重新开始</button></div></section>
@@ -64,7 +65,7 @@
     </main>
   </div>
 
-  <dialog id="help-dialog"><div class="dialog-heading"><h2>把魔方握在手里。</h2><button id="close-help" class="icon-button" aria-label="关闭操作说明">×</button></div><p>拖动空白处观察各个面，滚轮缩放。在色块上沿横向或纵向拖动，转层会跟随拖动，松手后归位；轻微拖动会回到原位。拖动面中心可旋转视角。</p><dl><dt>U / D</dt><dd>上 / 下</dd><dt>L / R</dt><dd>左 / 右</dd><dt>F / B</dt><dd>前 / 后</dd></dl><p>方向始终以<strong>正对所转面的视角</strong>为准。键盘字母键顺时针转动，Shift + 字母键逆时针转动。符号 <strong>′</strong> 代表逆时针，<strong>2</strong> 代表转动 180°。</p><p><strong>自动还原</strong>会为当前状态计算解法，可随时暂停；<strong>逐步</strong>每次执行解法的一步。手动转动后会重新计算方案。计时从打乱后的第一次转动开始，或从已还原状态的第一次转动开始。</p><button id="help-done" class="button primary-button">开始探索 <svg><use href="#i-arrow"/></svg></button></dialog>
+  <dialog id="help-dialog"><div class="dialog-heading"><h2>把魔方握在手里。</h2><button id="close-help" class="icon-button" aria-label="关闭操作说明">×</button></div><p>拖动空白处或按住右键观察各个面，滚轮缩放。在色块上沿横向或纵向拖动，转层会跟随拖动，松手后归位；轻微拖动会回到原位。中间的色块和面中心也能拖动，用来转动中间层。</p><dl><dt>U / D</dt><dd>上 / 下</dd><dt>L / R</dt><dd>左 / 右</dd><dt>F / B</dt><dd>前 / 后</dd><dt>M / E / S</dt><dd>左右 / 上下 / 前后中层</dd></dl><p>外层方向以<strong>正对所转面的视角</strong>为准。中层 M 的方向同 L，E 同 D，S 同 F。键盘字母键正向转动，Shift + 字母键反向转动。符号 <strong>′</strong> 代表反向，<strong>2</strong> 代表转动 180°。</p><p><strong>自动还原</strong>会为当前状态计算解法，可随时暂停；<strong>逐步</strong>每次执行解法的一步。中层转动会改变中心块的位置，只要六面各自同色就视为还原完成。手动转动后会重新计算方案。</p><button id="help-done" class="button primary-button">开始探索 <svg><use href="#i-arrow"/></svg></button></dialog>
   <script type="module" src="./src/app.mjs"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { COLORS, FACE_INFO, parseMove, rotateVector } from './cube-state.mjs';
+import { COLORS, FACE_INFO, MOVE_INFO, parseMove, rotateVector } from './cube-state.mjs';
 import { TurnMotion, dragSnap } from './turn-motion.mjs';
 import { FrameStats } from './frame-stats.mjs';
 
@@ -209,11 +209,11 @@ export class CubeView {
       const worldNormal = normal.clone().applyQuaternion(cubie.quaternion).round();
       const candidates = axes.flatMap((axis, i) => {
         const layer = cubie.userData.grid[i];
-        if (!layer || Math.abs(worldNormal.dot(axis)) > .5) return [];
+        if (Math.abs(worldNormal.dot(axis)) > .5) return [];
         const tangent = new THREE.Vector3().crossVectors(axis, hit.point);
         const p0 = hit.point.clone().project(this.camera), p1 = hit.point.clone().addScaledVector(tangent, .01).project(this.camera);
         const screen = new THREE.Vector2((p1.x - p0.x) * rect.width / .02, -(p1.y - p0.y) * rect.height / .02);
-        const face = Object.keys(FACE_INFO).find(f => FACE_INFO[f].axis === i && FACE_INFO[f].layer === layer);
+        const face = Object.keys(MOVE_INFO).find(f => MOVE_INFO[f].axis === i && MOVE_INFO[f].layer === layer);
         return screen.lengthSq() < 1 ? [] : [{ face, axis: i, layer, screen }];
       });
       if (!candidates.length) return;
@@ -245,7 +245,7 @@ export class CubeView {
         this.settle(this.preview, 0, 220, this.onInteractionChange);
         this.onInteractionChange();
       } else {
-        const clockwise = Math.sign(target) === -choice.layer;
+        const clockwise = Math.sign(target) === Math.sign(parseMove(choice.face).quarter);
         this.onTurn(choice.face + (clockwise ? '' : "'"));
       }
     };

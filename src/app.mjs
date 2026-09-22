@@ -1,5 +1,5 @@
 import { CubeView } from './cube-view.mjs';
-import { CubeState, COLORS, FACE_NAMES, inverseMove, makeScramble } from './cube-state.mjs';
+import { CubeState, COLORS, FACE_NAMES, MOVE_NAMES, inverseMove, makeScramble } from './cube-state.mjs';
 import { turnDuration } from './turn-motion.mjs';
 import { MoveQueue } from './move-queue.mjs';
 
@@ -55,13 +55,14 @@ function renderTimer() {
 }
 setInterval(renderTimer, 250);
 
-for (const face of ['U', 'D', 'L', 'R', 'F', 'B']) {
+for (const face of ['U', 'D', 'L', 'R', 'F', 'B', 'M', 'E', 'S']) {
   const button = document.createElement('button');
   button.className = 'face-button'; button.dataset.face = face;
-  button.style.setProperty('--face', COLORS[face]);
-  button.innerHTML = `<strong>${face}</strong><small>${FACE_NAMES[face]}</small><i></i>`;
+  button.style.setProperty('--face', COLORS[face] || '#8d9b82');
+  button.innerHTML = `<strong>${face}</strong><small>${FACE_NAMES[face] || { M:'左右', E:'上下', S:'前后' }[face]}</small><i></i>`;
+  if ('MES'.includes(face)) button.title = `${MOVE_NAMES[face]}，方向同 ${{ M:'L', E:'D', S:'F' }[face]}`;
   button.addEventListener('click', () => manualTurn(face + (direction === -1 ? "'" : direction === 2 ? '2' : '')));
-  $('face-controls').appendChild(button);
+  $('MES'.includes(face) ? 'slice-controls' : 'face-controls').appendChild(button);
 }
 document.querySelectorAll('[data-direction]').forEach(button => button.addEventListener('click', () => {
   direction = Number(button.dataset.direction);
@@ -89,7 +90,7 @@ function renderTrail() {
   moves.slice(start).forEach((move, i) => {
     const chip = document.createElement('span');
     chip.className = `move-chip${isPlan ? i < planIndex ? ' done' : i === planIndex ? ' next' : ' pending' : ''}`;
-    chip.textContent = displayMove(move); chip.title = `第 ${start + i + 1} 步：${FACE_NAMES[move[0]]}面${move.endsWith('2') ? '转动 180°' : move.endsWith("'") ? '逆时针' : '顺时针'}`;
+    chip.textContent = displayMove(move); chip.title = `第 ${start + i + 1} 步：${MOVE_NAMES[move[0]]}${move.endsWith('2') ? '转动 180°' : move.endsWith("'") ? '逆时针' : '顺时针'}`;
     if (isPlan && i === planIndex) chip.setAttribute('aria-current', 'step');
     trail.appendChild(chip);
   });
@@ -112,7 +113,7 @@ function update() {
   $('auto-solve').querySelector('use').setAttribute('href', mode === 'playing' ? '#i-pause' : '#i-play');
   document.querySelectorAll('.face-button').forEach(button => {
     button.disabled = !canQueueManual();
-    button.setAttribute('aria-label', `${FACE_NAMES[button.dataset.face]}面 ${direction === 2 ? '转动180度' : direction === -1 ? '逆时针转动' : '顺时针转动'}`);
+    button.setAttribute('aria-label', `${MOVE_NAMES[button.dataset.face]} ${direction === 2 ? '转动180度' : direction === -1 ? '逆时针转动' : '顺时针转动'}`);
   });
   renderTrail(); renderTimer();
 }
@@ -173,7 +174,7 @@ async function stepSolve() {
   if (!canTurn() || state.isSolved()) return;
   if (!await getPlan()) return;
   mode = 'paused';
-  setMessage(`下一步 ${displayMove(plan[planIndex])}：转动${FACE_NAMES[plan[planIndex][0]]}面。点击「逐步」继续。`);
+  setMessage(`下一步 ${displayMove(plan[planIndex])}：转动${MOVE_NAMES[plan[planIndex][0]]}。点击「逐步」继续。`);
   await perform(plan[planIndex], 'solution');
   if (!state.isSolved()) setMessage(`已完成 ${planIndex} / ${plan.length} 步，下一步 ${displayMove(plan[planIndex])}。`);
 }
@@ -207,7 +208,7 @@ $('help-dialog').addEventListener('click', event => { if (event.target === $('he
 document.addEventListener('keydown', event => {
   if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || $('help-dialog').open || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
   const face = event.key.toUpperCase();
-  if ('URFDLB'.includes(face) && face.length === 1) { event.preventDefault(); manualTurn(face + (event.shiftKey ? "'" : '')); }
+  if ('URFDLBMES'.includes(face) && face.length === 1) { event.preventDefault(); manualTurn(face + (event.shiftKey ? "'" : '')); }
 });
 
 try {

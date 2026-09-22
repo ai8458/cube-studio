@@ -10,6 +10,18 @@ export const FACE_INFO = {
   L: { axis: 0, layer: -1, normal: [-1, 0, 0] },
   B: { axis: 2, layer: -1, normal: [0, 0, -1] },
 };
+// Standard slice notation: M turns like L, E like D, and S like F.
+// Keep these separate from FACE_INFO, which describes the six painted faces.
+export const MOVE_INFO = {
+  ...FACE_INFO,
+  M: { axis: 0, layer: 0, normal: [-1, 0, 0] },
+  E: { axis: 1, layer: 0, normal: [0, -1, 0] },
+  S: { axis: 2, layer: 0, normal: [0, 0, 1] },
+};
+export const MOVE_NAMES = {
+  ...Object.fromEntries(FACES.map(face => [face, `${FACE_NAMES[face]}面`])),
+  M: '左右中层', E: '上下中层', S: '前后中层',
+};
 
 export function facePosition(face, row, col) {
   switch (face) {
@@ -24,11 +36,11 @@ export function facePosition(face, row, col) {
 }
 
 export function parseMove(move) {
-  if (!/^[URFDLB](2|')?$/.test(move)) throw new Error(`无效转动：${move}`);
+  if (!/^[URFDLBMES](2|')?$/.test(move)) throw new Error(`无效转动：${move}`);
   const face = move[0];
-  const info = FACE_INFO[face];
+  const info = MOVE_INFO[face];
   const turns = move.endsWith('2') ? 2 : move.endsWith("'") ? -1 : 1;
-  return { face, ...info, turns, quarter: -info.layer * turns };
+  return { face, ...info, turns, quarter: -info.normal[info.axis] * turns };
 }
 
 export function inverseMove(move) {
@@ -72,10 +84,12 @@ export class CubeState {
     return FACES.flatMap(face => Array.from({ length: 9 }, (_, i) =>
       lookup.get(key(facePosition(face, Math.floor(i / 3), i % 3), FACE_INFO[face].normal)))).join('');
   }
-  isSolved() { return this.asString() === SOLVED; }
+  isSolved() { return this.solvedFaces() === 6; }
   solvedFaces() {
     const state = this.asString();
-    return FACES.filter((f, i) => state.slice(i * 9, i * 9 + 9) === f.repeat(9)).length;
+    // Slice moves carry centers to other faces. A uniformly colored face is
+    // solved relative to its current center, irrespective of whole-cube pose.
+    return FACES.filter((_, i) => state.slice(i * 9, i * 9 + 9) === state[i * 9 + 4].repeat(9)).length;
   }
 }
 
