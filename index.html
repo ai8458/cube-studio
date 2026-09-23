@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f5f3ee">
   <title>魔方实验室 · Cube Studio</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%232d7665'/%3E%3Cpath d='m20 8 11 6v13l-11 6-11-6V14zM9 14l11 6 11-6M20 20v13' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./src/style.css">
+  <link rel="stylesheet" href="./src/style.css?v=6a7473630379">
   <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
@@ -56,17 +56,24 @@
             <p class="keyboard-tip">键盘 <kbd>U</kbd><kbd>D</kbd><kbd>L</kbd><kbd>R</kbd><kbd>F</kbd><kbd>B</kbd><br>中层 <kbd>M</kbd><kbd>E</kbd><kbd>S</kbd> · <span><kbd>Shift</kbd> 反向转动</span></p>
           </section>
 
-          <section class="control-section session-controls"><div class="session-stats"><div><span>本局转动</span><strong id="move-count">0<small>步</small></strong></div><div><span>已归位面</span><strong id="solved-count">6<small>/ 6</small></strong></div><div><span>用时</span><strong id="timer">00:00</strong></div></div><div class="utility-row"><button id="undo" class="text-button"><svg><use href="#i-undo"/></svg>撤销一步</button><button id="reset" class="text-button"><svg><use href="#i-reset"/></svg>重新开始</button></div></section>
+          <section class="control-section session-controls"><div class="session-stats"><div><span>本局转动</span><strong id="move-count">0<small>步</small></strong></div><div><span>已归位面</span><strong id="solved-count">6<small>/ 6</small></strong></div><div><span>用时</span><strong id="timer">00:00</strong></div></div><div class="utility-row"><button id="undo" class="text-button"><svg><use href="#i-undo"/></svg>撤销</button><button id="redo" class="text-button"><span aria-hidden="true">↪</span>重做</button><button id="reset" class="text-button"><svg><use href="#i-reset"/></svg>重新开始</button></div></section>
         </aside>
       </div>
 
-      <section class="journey-card"><div class="journey-heading"><div><span class="eyebrow">EVERY MOVE COUNTS</span><h2 id="journey-title">转动轨迹</h2></div><div class="journey-right"><span id="journey-caption">每一步，都离答案更近一点。</span><span id="solution-progress" hidden></span></div></div><div id="move-trail" class="move-trail"><span class="trail-empty">还没有转动。打乱魔方，或试着转动任意一面。<svg><use href="#i-arrow"/></svg></span></div><div id="solve-progress-track" class="solve-progress-track" hidden><div id="solve-progress-bar"></div></div></section>
+      <section class="journey-card" aria-label="转动历史">
+        <div class="journey-heading"><div><span class="eyebrow">EVERY MOVE COUNTS</span><h2 id="journey-title">转动轨迹</h2></div><div class="journey-actions"><span id="journey-caption"></span><button id="history-replay" class="button replay-button">回放轨迹</button></div></div>
+        <p class="history-tip">点击任意一步查看当时的魔方；从过去继续转动，会替换后续记录。</p>
+        <div id="move-trail" class="move-trail"></div>
+        <div id="history-pages" class="history-pages" hidden><button id="history-prev" class="text-button">← 较早记录</button><span id="history-page"></span><button id="history-next" class="text-button">较新记录 →</button></div>
+        <div class="save-row"><span id="save-status" role="status">自动保存已开启</span><span>撤销 Ctrl / ⌘ Z · 重做 Shift Z</span></div>
+      </section>
+      <section id="solution-panel" class="journey-card" hidden><div class="journey-heading"><h2>还原路线</h2><span id="solution-progress"></span></div><div id="solution-trail" class="move-trail"></div><div id="solve-progress-track" class="solve-progress-track" hidden><div id="solve-progress-bar"></div></div></section>
       <footer><span>一点耐心，六面可能。</span><span>BUILT TO PLAY <span class="footer-cross">＋</span> POWERED BY THREE.JS</span></footer>
     </main>
   </div>
 
-  <dialog id="help-dialog"><div class="dialog-heading"><h2>把魔方握在手里。</h2><button id="close-help" class="icon-button" aria-label="关闭操作说明">×</button></div><p>拖动空白处或按住右键观察各个面，滚轮缩放。在色块上沿横向或纵向拖动，转层会跟随拖动，松手后归位；轻微拖动会回到原位。中间的色块和面中心也能拖动，用来转动中间层。</p><dl><dt>U / D</dt><dd>上 / 下</dd><dt>L / R</dt><dd>左 / 右</dd><dt>F / B</dt><dd>前 / 后</dd><dt>M / E / S</dt><dd>左右 / 上下 / 前后中层</dd></dl><p>外层方向以<strong>正对所转面的视角</strong>为准。中层 M 的方向同 L，E 同 D，S 同 F。键盘字母键正向转动，Shift + 字母键反向转动。符号 <strong>′</strong> 代表反向，<strong>2</strong> 代表转动 180°。</p><p><strong>自动还原</strong>会为当前状态计算解法，可随时暂停；<strong>逐步</strong>每次执行解法的一步。中层转动会改变中心块的位置，只要六面各自同色就视为还原完成。手动转动后会重新计算方案。</p><button id="help-done" class="button primary-button">开始探索 <svg><use href="#i-arrow"/></svg></button></dialog>
-  <script type="module" src="./src/app.mjs"></script>
+  <dialog id="help-dialog"><div class="dialog-heading"><h2>把魔方握在手里。</h2><button id="close-help" class="icon-button" aria-label="关闭操作说明">×</button></div><p>拖动空白处或按住右键观察各个面，滚轮缩放。在色块上沿横向或纵向拖动，转层会跟随拖动，松手后归位；轻微拖动会回到原位。中间的色块和面中心也能拖动，用来转动中间层。</p><dl><dt>U / D</dt><dd>上 / 下</dd><dt>L / R</dt><dd>左 / 右</dd><dt>F / B</dt><dd>前 / 后</dd><dt>M / E / S</dt><dd>左右 / 上下 / 前后中层</dd></dl><p>外层方向以<strong>正对所转面的视角</strong>为准。中层 M 的方向同 L，E 同 D，S 同 F。键盘字母键正向转动，Shift + 字母键反向转动。符号 <strong>′</strong> 代表反向，<strong>2</strong> 代表转动 180°。</p><p><strong>自动还原</strong>会为当前状态计算解法，可随时暂停；<strong>逐步</strong>每次执行解法的一步。中层转动会改变中心块的位置，只要六面各自同色就视为还原完成。手动转动后会重新计算方案。</p><p><strong>转动轨迹</strong>可以撤销、重做，点击某一步可查看当时状态；回放支持暂停。从过去继续转动会替换后续记录。快捷键 Ctrl / ⌘ + Z 撤销，Ctrl / ⌘ + Shift + Z 或 Ctrl + Y 重做。</p><p>魔方、历史、计时、视角与速度会自动保存在当前浏览器。刷新或再次打开即可继续，关闭页面期间不计时。「重新开始」会清空当前进度。</p><button id="help-done" class="button primary-button">开始探索 <svg><use href="#i-arrow"/></svg></button></dialog>
+  <script type="module" src="./src/app.mjs?v=6a7473630379"></script>
 </body>
 </html>
 

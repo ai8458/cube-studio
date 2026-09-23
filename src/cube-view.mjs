@@ -3,9 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { COLORS, FACE_INFO, MOVE_INFO, parseMove, rotateVector } from './cube-state.mjs';
-import { TurnMotion, dragSnap } from './turn-motion.mjs';
-import { FrameStats } from './frame-stats.mjs';
+import { COLORS, FACE_INFO, MOVE_INFO, MOVE_NAMES, parseMove, rotateVector } from './cube-state.mjs?v=6a7473630379';
+import { TurnMotion, dragSnap } from './turn-motion.mjs?v=6a7473630379';
+import { FrameStats } from './frame-stats.mjs?v=6a7473630379';
 
 const zAxis = new THREE.Vector3(0, 0, 1);
 const axes = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), zAxis];
@@ -55,6 +55,15 @@ export class CubeView {
     };
     this.bodyGeometry = paint(new RoundedBoxGeometry(.965, .965, .965, 2, .066), '#171e1e');
     this.cubieMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, metalness: .02, envMapIntensity: .45 });
+    this.selectedMaterial = this.cubieMaterial.clone();
+    this.selectedMaterial.emissive.set('#9bcdb1'); this.selectedMaterial.emissiveIntensity = .2;
+    this.outlineGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(.99, .99, .99));
+    this.outlineMaterial = new THREE.LineBasicMaterial({ color: '#f8fff1', transparent: true, opacity: .85 });
+    this.hint = document.createElement('div'); this.hint.className = 'selection-hint'; this.hint.hidden = true;
+    this.arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    this.arrow.classList.add('selection-arrow'); this.arrow.setAttribute('aria-hidden', 'true'); this.arrow.style.display = 'none';
+    this.arrow.innerHTML = '<defs><marker id="turn-arrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L6,3.5 L0,7" fill="none" stroke="#286b53" stroke-width="1.6"/></marker></defs><path class="turn-arc" marker-end="url(#turn-arrow)"/>';
+    container.append(this.arrow, this.hint);
     const shape = new THREE.Shape(); const h = .406, r = .065;
     shape.moveTo(-h + r, -h); shape.lineTo(h - r, -h); shape.quadraticCurveTo(h, -h, h, -h + r);
     shape.lineTo(h, h - r); shape.quadraticCurveTo(h, h, h - r, h); shape.lineTo(-h + r, h);
@@ -113,6 +122,8 @@ export class CubeView {
       }
       const mesh = new THREE.Mesh(mergeGeometries(parts), this.cubieMaterial);
       cubie.add(mesh); cubie.userData.mesh = mesh;
+      const outline = new THREE.LineSegments(this.outlineGeometry, this.outlineMaterial);
+      outline.visible = false; cubie.add(outline); cubie.userData.outline = outline;
       this.root.add(cubie); this.cubies.push(cubie);
     }
   }
@@ -125,7 +136,65 @@ export class CubeView {
     this.camera.updateProjectionMatrix(); this.renderer.setSize(width, height, false);
     this.needsRender = true;
   }
-  reset() { if (this.animation) throw new Error('不能在转动中重置'); this.build(); }
+  reset() { if (this.isInteracting) throw new Error('不能在转动中重置'); this.clearSelection(); this.build(); }
+
+  load(moves) {
+    this.reset();
+    for (const move of moves) {
+      const { axis, layer, quarter } = parseMove(move);
+      const rotation = new THREE.Quaternion().setFromAxisAngle(axes[axis], quarter * Math.PI / 2);
+      for (const cubie of this.cubies.filter(c => c.userData.grid[axis] === layer)) {
+        cubie.userData.grid = rotateVector(cubie.userData.grid, axis, quarter);
+        cubie.position.set(...cubie.userData.grid); cubie.quaternion.premultiply(rotation);
+        this.snapRotation(cubie);
+      }
+    }
+    this.needsRender = true;
+  }
+  snapRotation(cubie) {
+    const rotation = new THREE.Matrix4().makeRotationFromQuaternion(cubie.quaternion);
+    [0, 1, 2, 4, 5, 6, 8, 9, 10].forEach(i => { rotation.elements[i] = Math.round(rotation.elements[i]); });
+    cubie.quaternion.setFromRotationMatrix(rotation).normalize();
+  }
+  getCameraState() { return { position: this.camera.position.toArray(), target: this.controls.target.toArray() }; }
+  restoreCamera(camera) {
+    this.camera.position.fromArray(camera.position); this.controls.target.fromArray(camera.target);
+    this.controls.update(); this.needsRender = true;
+  }
+  previewMove(move) { if (this.canTurn()) this.selectLayer(parseMove(move)); }
+  clearSelection() {
+    if (this.isInteracting) return;
+    this.selection = null; this.hint.hidden = true; this.arrow.style.display = 'none';
+    this.cubies?.forEach(c => { c.userData.mesh.material = this.cubieMaterial; c.userData.outline.visible = false; });
+    this.needsRender = true;
+  }
+  selectLayer({ axis, layer, quarter = 0 }) {
+    this.selection = { axis, layer, quarter };
+    const face = Object.keys(MOVE_INFO).find(f => MOVE_INFO[f].axis === axis && MOVE_INFO[f].layer === layer);
+    const suffix = Math.abs(quarter) === 2 ? '2' : quarter && Math.sign(quarter) !== Math.sign(parseMove(face).quarter) ? '′' : '';
+    this.hint.textContent = `${face}${suffix} · ${MOVE_NAMES[face]} · ${quarter ? Math.abs(quarter) === 2 ? '转动 180°' : suffix ? '逆向转动' : '正向转动' : '拖动选择方向'}`;
+    this.hint.hidden = false; this.arrow.style.display = quarter ? '' : 'none';
+    this.cubies.forEach(c => {
+      const selected = c.userData.grid[axis] === layer;
+      c.userData.mesh.material = selected ? this.selectedMaterial : this.cubieMaterial;
+      c.userData.outline.visible = selected;
+    });
+    this.needsRender = true;
+  }
+  renderArrow() {
+    if (!this.selection?.quarter) return;
+    const { axis, layer, quarter } = this.selection;
+    const u = axes[(axis + 1) % 3], v = axes[(axis + 2) % 3];
+    const angle = Math.atan2(this.camera.position.dot(v), this.camera.position.dot(u));
+    const { width, height } = this.container.getBoundingClientRect();
+    const points = Array.from({ length: 25 }, (_, i) => {
+      const a = angle + (i / 24 - .5) * 1.5 * Math.sign(quarter);
+      const p = axes[axis].clone().multiplyScalar(layer).addScaledVector(u, Math.cos(a) * 2.25).addScaledVector(v, Math.sin(a) * 2.25).project(this.camera);
+      return `${(p.x + 1) * width / 2},${(1 - p.y) * height / 2}`;
+    });
+    this.arrow.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    this.arrow.querySelector('.turn-arc').setAttribute('d', `M${points.join(' L')}`);
+  }
 
   get isInteracting() { return Boolean(this.dragging || this.animation); }
 
@@ -148,6 +217,7 @@ export class CubeView {
   turn(move, duration = 900) {
     if (this.animation) return Promise.reject(new Error('转动尚未结束'));
     const { axis, layer, quarter } = parseMove(move);
+    this.selectLayer({ axis, layer, quarter });
     const moving = this.preview || this.makeLayer(axis, layer);
     const remaining = Math.abs(quarter * Math.PI / 2 - moving.angle) / (Math.PI / 2);
     const settleDuration = this.preview ? Math.max(100, Math.min(duration, 520) * remaining * .65) : duration;
@@ -177,15 +247,15 @@ export class CubeView {
           cubie.userData.grid = rotateVector(cubie.userData.grid, animation.axis, animation.quarter);
           cubie.position.set(...cubie.userData.grid);
           // Snap the orientation to an exact signed permutation matrix after each quarter turn.
-          const rotation = new THREE.Matrix4().makeRotationFromQuaternion(cubie.quaternion);
-          [0, 1, 2, 4, 5, 6, 8, 9, 10].forEach(i => { rotation.elements[i] = Math.round(rotation.elements[i]); });
-          cubie.quaternion.setFromRotationMatrix(rotation).normalize();
+          this.snapRotation(cubie);
         }
-        this.root.remove(animation.group); this.animation = null; animation.resolve();
+        this.root.remove(animation.group); this.animation = null; this.clearSelection(); animation.resolve();
       }
     }
     const cameraChanged = this.controls.update();
+    if (cameraChanged) this.onCameraChange?.();
     if (animation || this.preview || cameraChanged || this.needsRender) {
+      this.renderArrow();
       this.renderer.render(this.scene, this.camera);
       this.afterRender?.();
       this.needsRender = false;
@@ -219,6 +289,7 @@ export class CubeView {
       if (!candidates.length) return;
       drag = { x: event.clientX, y: event.clientY, id: event.pointerId, candidates, choice: null };
       this.dragging = true; this.onInteractionChange();
+      this.selectLayer(candidates[0]);
       this.controls.enabled = false; canvas.setPointerCapture(event.pointerId); event.stopImmediatePropagation();
     }, true);
     canvas.addEventListener('pointermove', event => {
@@ -234,12 +305,13 @@ export class CubeView {
       }
       const angle = delta.dot(drag.choice.screen) / drag.choice.screen.lengthSq();
       this.preview.targetAngle = THREE.MathUtils.clamp(angle, -Math.PI / 2, Math.PI / 2);
+      this.selectLayer({ ...drag.choice, quarter: Math.sign(angle) });
     });
     const release = event => {
       if (!drag || event.pointerId !== drag.id) return;
       const choice = drag.choice;
       drag = null; this.dragging = false; this.controls.enabled = true;
-      if (!this.preview) { this.onInteractionChange(); return; }
+      if (!this.preview) { this.clearSelection(); this.onInteractionChange(); return; }
       const target = dragSnap(this.preview.targetAngle, event.type !== 'pointerup');
       if (target === 0) {
         this.settle(this.preview, 0, 220, this.onInteractionChange);
